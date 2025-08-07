@@ -12,6 +12,7 @@ router.post("/login", authController.ownerLogin);
 router.post("/logout", authController.logout);
 router.get("/getallusers", authController.getallusers);
 router.patch("/toggle-permission/:id", authController.toggleUserPermission);
+router.patch("/update-user-regions/:id", authController.updateUserRegions);
 router.delete("/delete-user/:id", authController.deleteUser);
 router.get("/user/:userId", authController.getCurrentUser);
 

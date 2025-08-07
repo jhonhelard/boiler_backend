@@ -7,6 +7,19 @@ const bcrypt = require("bcrypt");
 const ownerRegister = async (req, res) => {
   try {
     const { email, password, first_name, last_name, region, admin } = req.body.data.attributes;
+    
+    let regionArr = region;
+    if (typeof region === "string") {
+      regionArr = [region];
+    }
+    if (!Array.isArray(regionArr) || regionArr.length === 0) {
+      return res.status(400).json({ success: false, message: 'Region must be a non-empty array of region IDs.' });
+    }
+    for (const regionId of regionArr) {
+      if (!regionId.match(/^[0-9a-fA-F]{24}$/)) {
+        return res.status(400).json({ success: false, message: `Invalid region ID: ${regionId}` });
+      }
+    }
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ 
@@ -21,7 +34,7 @@ const ownerRegister = async (req, res) => {
       hashedPassword,
       first_name,
       last_name,
-      region,
+      region: regionArr, // always an array
       admin
     });
 
@@ -127,6 +140,51 @@ const logout = async (req, res) => {
   }
 };
 
+const updateUserRegions = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { regions } = req.body;
+    
+    if (!Array.isArray(regions)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Regions must be an array' 
+      });
+    }
+    
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    // Validate that all region IDs are valid ObjectIds
+    for (const regionId of regions) {
+      if (!regionId.match(/^[0-9a-fA-F]{24}$/)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: `Invalid region ID: ${regionId}` 
+        });
+      }
+    }
+    
+    user.region = regions;
+    await user.save();
+    
+    res.json({ 
+      success: true, 
+      message: 'User regions updated successfully',
+      data: {
+        id: user._id,
+        email: user.email,
+        region: user.region
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
 const getCurrentUser = async (req, res) => {
   try {
     // This endpoint is for testing - in production you'd get user ID from JWT
@@ -173,5 +231,6 @@ module.exports = {
   toggleUserPermission,
   deleteUser,
   logout,
-  getCurrentUser
+  getCurrentUser,
+  updateUserRegions
 };
