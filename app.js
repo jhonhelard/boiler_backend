@@ -408,8 +408,14 @@ fetchGoogleSheetData();
 
 
 
-app.get('/api/sheet-data', (req, res) => {  
-  res.json([googleSheetData,googleSheetData1,totalstate,perType,perFuelUsed,variousIndustries,HeatingSurface,perCapacity,certificate,BoilerRegistered,Accidents,Economisers,perVarious,EconomiserStatus,RunningEconomisers,Accident]);
+app.get('/api/sheet-data', (req, res) => {    
+  res.json([googleSheetData]);
+});
+
+app.get('/api/sheet-data1', (req, res) => {    
+  console.log(totalstate,"total");
+  
+  res.json([googleSheetData1,totalstate,perType,perFuelUsed,variousIndustries,HeatingSurface,perCapacity,certificate,BoilerRegistered,Accidents,Economisers,perVarious,EconomiserStatus,RunningEconomisers,Accident]);
 });
 
 // Endpoint to refresh Google Sheets data
