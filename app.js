@@ -76,6 +76,61 @@ let Accident5=[];
 let Accident6=[];
 let Accident7=[];
 
+// New variables for API data
+let apiBoilerSummaryData = [];
+
+async function fetchApiBoilerSummaryData() {
+  const API_URL = process.env.API_URL;
+  
+  // Check if environment variable is set
+  if (!API_URL) {
+    console.error('Missing required environment variable: API_URL');
+    return;
+  }
+  
+  // Set dates
+  const startDate = "2024-04-30";
+  const endDate = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD format
+  
+  const requestBody = {
+    "StartDate": startDate,
+    "EndDate": endDate
+  };
+  
+  try {
+    console.log(`Fetching boiler summary data from API: ${API_URL}`);
+    console.log(`Date range: ${startDate} to ${endDate}`);
+    
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data || !Array.isArray(data)) {
+      console.error('Error: Invalid data format received from API');
+      return;
+    }
+    
+    apiBoilerSummaryData = data;
+    
+    console.log(`Successfully fetched ${data.length} records from boiler summary API`);
+    console.log('API Data:', JSON.stringify(data, null, 2));
+    console.log(apiBoilerSummaryData,"apiBoilerSummaryData");
+    
+  } catch (error) {
+    console.error('Error fetching boiler summary data from API:', error);
+    // Don't throw error to prevent server startup failure
+  }
+}
 
 async function fetchGoogleSheetData() {
   const SHEET_ID = process.env.GOOGLE_SHEET_ID;
@@ -404,7 +459,24 @@ async function fetchGoogleSheetData() {
 }
 
 // Fetch data once when the server starts
-fetchGoogleSheetData();
+async function initializeData() {
+  try {
+    console.log('Initializing server data...');
+    
+    // Fetch both Google Sheets data and API data in parallel
+    await Promise.all([
+      fetchGoogleSheetData(),
+      fetchApiBoilerSummaryData()
+    ]);
+    
+    console.log('Server data initialization completed successfully');
+  } catch (error) {
+    console.error('Error during server data initialization:', error);
+  }
+}
+
+// Initialize data when server starts
+initializeData();
 
 
 
@@ -412,22 +484,33 @@ app.get('/api/sheet-data', (req, res) => {
   res.json([googleSheetData]);
 });
 
+// Endpoint to get API boiler summary data
+app.get('/api/boiler-summary', (req, res) => {    
+  res.json(apiBoilerSummaryData);
+});
+
 app.get('/api/sheet-data1', (req, res) => {    
   console.log(totalstate,"total");
   
-  res.json([googleSheetData1,totalstate,perType,perFuelUsed,variousIndustries,HeatingSurface,perCapacity,certificate,BoilerRegistered,Accidents,Economisers,perVarious,EconomiserStatus,RunningEconomisers,Accident]);
+  res.json([googleSheetData1,totalstate,perType,perFuelUsed,variousIndustries,HeatingSurface,perCapacity,certificate,BoilerRegistered,Accidents,Economisers,perVarious,EconomiserStatus,RunningEconomisers,Accident,apiBoilerSummaryData]);
 });
 
-// Endpoint to refresh Google Sheets data
+// Endpoint to refresh all data (Google Sheets and API)
 app.post('/api/refresh-sheet-data', async (req, res) => {
   try {
-    console.log('Refreshing Google Sheets data...');
-    await fetchGoogleSheetData();
-    console.log('Google Sheets data refreshed successfully');
+    console.log('Refreshing all data...');
+    
+    // Refresh both Google Sheets data and API data in parallel
+    await Promise.all([
+      fetchGoogleSheetData(),
+      fetchApiBoilerSummaryData()
+    ]);
+    
+    console.log('All data refreshed successfully');
     res.json({ 
       success: true, 
       message: 'Data refreshed successfully',
-      data: [googleSheetData,googleSheetData1,totalstate,perType,perFuelUsed,variousIndustries,HeatingSurface,perCapacity,certificate,BoilerRegistered,Accidents,Economisers,perVarious,EconomiserStatus,RunningEconomisers,Accident]
+      data: [googleSheetData,googleSheetData1,totalstate,perType,perFuelUsed,variousIndustries,HeatingSurface,perCapacity,certificate,BoilerRegistered,Accidents,Economisers,perVarious,EconomiserStatus,RunningEconomisers,Accident,apiBoilerSummaryData]
     });
   } catch (error) {
     console.error('Error refreshing data:', error);
