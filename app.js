@@ -79,59 +79,6 @@ let Accident7=[];
 // New variables for API data
 let apiBoilerSummaryData = [];
 
-async function fetchApiBoilerSummaryData() {
-  const API_URL = process.env.API_URL;
-  
-  // Check if environment variable is set
-  if (!API_URL) {
-    console.error('Missing required environment variable: API_URL');
-    return;
-  }
-  
-  // Set dates
-  const startDate = "2024-04-30";
-  const endDate = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD format
-  
-  const requestBody = {
-    "StartDate": startDate,
-    "EndDate": endDate
-  };
-  
-  try {
-    console.log(`Fetching boiler summary data from API: ${API_URL}`);
-    console.log(`Date range: ${startDate} to ${endDate}`);
-    
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody)
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const data = await response.json();
-    
-    if (!data || !Array.isArray(data)) {
-      console.error('Error: Invalid data format received from API');
-      return;
-    }
-    
-    apiBoilerSummaryData = data;
-    
-    console.log(`Successfully fetched ${data.length} records from boiler summary API`);
-    console.log('API Data:', JSON.stringify(data, null, 2));
-    console.log(apiBoilerSummaryData,"apiBoilerSummaryData");
-    
-  } catch (error) {
-    console.error('Error fetching boiler summary data from API:', error);
-    // Don't throw error to prevent server startup failure
-  }
-}
-
 async function fetchGoogleSheetData() {
   const SHEET_ID = process.env.GOOGLE_SHEET_ID;
   const API_KEY = process.env.GOOGLE_API_KEY;
@@ -466,7 +413,6 @@ async function initializeData() {
     // Fetch both Google Sheets data and API data in parallel
     await Promise.all([
       fetchGoogleSheetData(),
-      // fetchApiBoilerSummaryData()
     ]);
     
     console.log('Server data initialization completed successfully');
@@ -585,7 +531,6 @@ app.post('/api/refresh-sheet-data', async (req, res) => {
     // Refresh both Google Sheets data and API data in parallel
     await Promise.all([
       fetchGoogleSheetData(),
-      // fetchApiBoilerSummaryData()
     ]);
     
     console.log('All data refreshed successfully');
