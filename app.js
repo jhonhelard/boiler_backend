@@ -466,7 +466,7 @@ async function initializeData() {
     // Fetch both Google Sheets data and API data in parallel
     await Promise.all([
       fetchGoogleSheetData(),
-      fetchApiBoilerSummaryData()
+      // fetchApiBoilerSummaryData()
     ]);
     
     console.log('Server data initialization completed successfully');
@@ -485,8 +485,90 @@ app.get('/api/sheet-data', (req, res) => {
 });
 
 // Endpoint to get API boiler summary data
-app.get('/api/boiler-summary', (req, res) => {    
-  res.json(apiBoilerSummaryData);
+app.get('/api/boiler-summary', async (req, res) => {    
+  console.log(req.query, "req.query");
+  
+  try {
+    // Extract start and end dates from query parameters
+    const { StartDate, EndDate } = req.query;
+    
+    // Validate required parameters
+    if (!StartDate || !EndDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'StartDate and EndDate parameters are required'
+      });
+    }
+    
+    // Validate date format (basic validation)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(StartDate) || !dateRegex.test(EndDate)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid date format. Use YYYY-MM-DD format'
+      });
+    }
+    
+    console.log(`Fetching boiler summary data for date range: ${StartDate} to ${EndDate}`);
+    
+    // Fetch data from external API using the provided dates
+    const API_URL = process.env.API_URL;
+    
+    if (!API_URL) {
+      console.error('Missing required environment variable: API_URL');
+      return res.status(500).json({
+        success: false,
+        message: 'Server configuration error: API_URL not set'
+      });
+    }
+    
+    const requestBody = {
+      "StartDate": StartDate,
+      "EndDate": EndDate
+    };
+    
+    console.log(`Making API request to: ${API_URL}`);
+    console.log(`Request body:`, requestBody);
+    
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data || !Array.isArray(data)) {
+      console.error('Error: Invalid data format received from API');
+      return res.status(500).json({
+        success: false,
+        message: 'Invalid data format received from external API'
+      });
+    }
+    
+    console.log(`Successfully fetched ${data.length} records from external API`);
+    
+    // Return the data to frontend
+    res.json({
+      success: true,
+      data: data,
+      message: `Successfully retrieved ${data.length} records for date range ${StartDate} to ${EndDate}`
+    });
+    
+  } catch (error) {
+    console.error('Error fetching boiler summary data from external API:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch data from external API',
+      error: error.message
+    });
+  }
 });
 
 app.get('/api/sheet-data1', (req, res) => {    
@@ -503,7 +585,7 @@ app.post('/api/refresh-sheet-data', async (req, res) => {
     // Refresh both Google Sheets data and API data in parallel
     await Promise.all([
       fetchGoogleSheetData(),
-      fetchApiBoilerSummaryData()
+      // fetchApiBoilerSummaryData()
     ]);
     
     console.log('All data refreshed successfully');
